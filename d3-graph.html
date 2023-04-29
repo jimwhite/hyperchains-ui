@@ -26,10 +26,23 @@
             return json;
         }
 
+
+        async function loadGraph(name) {
+            const response = await fetch(`${apiBaseURL}/loadgraph/${name}`);
+            const json = await response.json();
+            return json;
+        }
+
         const graphBox = d3.select("#hc-graphs");
 
+        function updateGraph(name) {
+            loadGraph(name).then(g =>
+                console.log(g));
+        };
+
+
         function updateGraphList(data) {
-            var sorted = data.sort(function (a, b) { return d3.descending(a.name, b.name); });
+            var sorted = data.sort(function (a, b) { return d3.ascending(a.name, b.name); });
 
             var graph = graphBox
                 .selectAll('div')
@@ -39,6 +52,7 @@
                 .append("div")
                 .attr("class", "graphdiv")
                 // .style("opacity", 0)
+                .on("click", function (d, g) { updateGraph(g.name); })
                 ;
             enterDiv.append("div")
                 .attr("class", "graphname")
@@ -97,11 +111,11 @@
 
             const hcNodes = await fetchNodeData("nodedata");
             console.log(hcNodes);
-            let nodeData = [];
+            let graphData = [];
 
-            const graphData = {
-                nodes: nodeData.map((node, index) => ({ node, index })),
-                // links: nodeData.nodes.flatMap((node, index) => (
+            graphData = {
+                nodes: graphData.map((node, index) => ({ node, index })),
+                // links: graphData.nodes.flatMap((node, index) => (
                 //   node.outputs.map(output => ({ source: index, target: output }))
                 // )),
             };
