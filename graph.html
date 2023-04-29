@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HypernodesAPI Interface</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>HypernodesAPI Interface</h1>
+    <button id="get-nodedata">Get Node Data</button>
+    <button id="get-graphs">Get Graphs</button>
+    <button id="load-graph">Load Graph</button>
+    <button id="init-debug-graph">Init Debug Graph</button>
+    <button id="run-graph">Run Graph</button>
+    <button id="save-graph">Save Graph</button>
+    <button id="graph-debug">Graph Debug</button>
+    <button id="run-graph-debug">Run Graph Debug</button>
+    <pre id="output"></pre>
+
+    <script>
+        const baseUrl = "https://hypernodesapiprealpha.azurewebsites.net/";
+
+        function handleResponse(response) {
+            $("#output").text(JSON.stringify(response, null, 2));
+        }
+
+        function handleError(error) {
+            $("#output").text("Error: " + error);
+        }
+
+        function ajaxCall(endpoint, type, data = null) {
+            $.ajax({
+                url: baseUrl + endpoint,
+                type: type,
+                data: data ? JSON.stringify(data) : null,
+                dataType: "json",
+                contentType: "application/json",
+                success: handleResponse,
+                error: handleError
+            });
+        }
+
+        $("#get-nodedata").click(() => ajaxCall("/nodedata", "GET"));
+        $("#get-graphs").click(() => ajaxCall("/getgraphs", "GET"));
+        $("#load-graph").click(() => {
+            const graphName = prompt("Enter graph name:");
+            ajaxCall(`/loadgraph/${graphName}`, "GET");
+        });
+        $("#init-debug-graph").click(() => ajaxCall("/initdebuggraph", "POST"));
+
+        $("#run-graph").click(() => {
+            const graphName = prompt("Enter graph name:");
+            const inputData = {}; // Add your input data object
+            ajaxCall("/rungraph", "POST", { graphName, inputData });
+        });
+
+        $("#save-graph").click(() => {
+            const name = prompt("Enter graph name:");
+            const graphData = {}; // Add your graph data object
+            ajaxCall("/savegraph", "POST", { name, graphData });
+        });
+
+        $("#graph-debug").click(() => {
+            const graphKey = prompt("Enter graph key:");
+            ajaxCall("/graphdebug", "POST", { graphKey });
+        });
+
+        $("#run-graph-debug").click(() => {
+            const graphName = prompt("Enter graph name:");
+            const inputData = {}; // Add your input data object
+            const graphKey = prompt("Enter graph key:");
+            ajaxCall("/rungraphdebug", "POST", { graphName, inputData, graphKey });
+        });
+    </script>
+</body>
+</html>
