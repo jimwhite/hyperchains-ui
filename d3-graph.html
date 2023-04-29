@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypernodes API Visualization</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        svg {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hypernodes API Visualization</h1>
+    <div id="hc-graphs"></div>
+    <svg id="force-directed-layout" width="800" height="600"></svg>
+    <script>
+        const apiBaseURL = "https://hypernodesapiprealpha.azurewebsites.net"; // Replace with your API base URL
+
+        async function fetchNodeData(func) {
+            const response = await fetch(`${apiBaseURL}/${func}`);
+            const json = await response.json();
+            return json;
+        }
+
+        const graphBox = d3.select("#hc-graphs");
+
+        function updateGraphList(data) {
+            var sorted = data.sort(function (a, b) { return d3.descending(a.name, b.name); });
+
+            var graph = graphBox
+                .selectAll('div')
+                .data(sorted, function (d) { return d.name; });
+
+            var enterDiv = graph.enter()
+                .append("div")
+                .attr("class", "graphdiv")
+                // .style("opacity", 0)
+                ;
+            enterDiv.append("div")
+                .attr("class", "graphname")
+                .text(function (d) { return d.name });
+
+            // graph.transition()
+            //     .delay(200)
+            //     .style("opacity", 1);
+            graph.exit()
+                // .transition()
+                // .duration(200)
+                // .style("opacity", 0)
+                .remove();
+        }
+
+        function createForceDirectedLayout(data) {
+            const width = 800;
+            const height = 600;
+
+            const simulation = d3.forceSimulation(data.nodes)
+                .force("charge", d3.forceManyBody().strength(-1000))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                // .force("links", d3.forceLink(data.links).distance(100))
+                .force("collision", d3.forceCollide().radius(50));
+
+            const svg = d3.select("#force-directed-layout");
+
+            //   const links = svg.selectAll("line")
+            //     .data(data.links)
+            //     .enter()
+            //     .append("line")
+            //     .style("stroke", "#aaa");
+
+            const nodes = svg.selectAll("circle")
+                .data(data.nodes)
+                .enter()
+                .append("circle")
+                .attr("r", 20)
+                .style("fill", "#69b3a2");
+
+            simulation.on("tick", () => {
+                // links.attr("x1", d => d.source.x)
+                //   .attr("y1", d => d.source.y)
+                //   .attr("x2", d => d.target.x)
+                //   .attr("y2", d => d.target.y);
+
+                nodes.attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+            });
+        }
+
+        async function main() {
+
+            const hcGraphs = await fetchNodeData("getgraphs");
+            updateGraphList(hcGraphs);
+
+            const hcNodes = await fetchNodeData("nodedata");
+            console.log(hcNodes);
+            let nodeData = [];
+
+            const graphData = {
+                nodes: nodeData.map((node, index) => ({ node, index })),
+                // links: nodeData.nodes.flatMap((node, index) => (
+                //   node.outputs.map(output => ({ source: index, target: output }))
+                // )),
+            };
+
+            console.log(graphData);
+            createForceDirectedLayout(graphData);
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
