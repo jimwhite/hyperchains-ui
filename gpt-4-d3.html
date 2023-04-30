@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>D3 Force Layout with Graph Updates and Dragging</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    circle {
+      fill: #2ca02c;
+      stroke: #000;
+      stroke-width: 1.5px;
+    }
+
+    line {
+      stroke: #999;
+      stroke-opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+<script>
+  const width = 800;
+  const height = 600;
+
+  const svg = d3.select("body")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  const simulation = d3.forceSimulation()
+    .force("link", d3.forceLink().id(d => d.id))
+    .force("charge", d3.forceManyBody())
+    .force("center", d3.forceCenter(width / 2, height / 2));
+
+  const data = {
+    nodes: [
+      {id: "A"},
+      {id: "B"},
+      {id: "C"}
+    ],
+    links: [
+      {source: "A", target: "B"},
+      {source: "B", target: "C"},
+      {source: "C", target: "A"}
+    ]
+  };
+
+  function updateGraph() {
+    const nodes = data.nodes;
+    const links = data.links;
+
+    // Update links
+    const link = svg.selectAll("line")
+      .data(links, d => `${d.source.id}-${d.target.id}`)
+      .join("line");
+
+    // Update nodes
+    const node = svg.selectAll("circle")
+      .data(nodes, d => d.id)
+      .join("circle")
+      .attr("r", 5)
+      .call(drag(simulation));
+
+    // Update simulation nodes and links
+    simulation.nodes(nodes);
+    simulation.force("link").links(links);
+
+    simulation.on("tick", () => {
+      link.attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+
+      node.attr("cx", d => d.x)
+          .attr("cy", d => d.y);
+    });
+
+    simulation.alpha(1).restart();
+  }
+
+  function drag(simulation) {
+    function dragstarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+    
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+    
+    function dragended(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+    
+    return d3.drag()
+             .on("start", dragstarted)
+             .on("drag", dragged)
+             .on("end", dragended);
+  }
+
+  updateGraph();
+
+  // Example of adding a node and link after 3 seconds
+  setTimeout(() => {
+    data.nodes.push({id: "D"});
+    data.links.push({source: "A", target: "D"});
+    updateGraph();
+  }, 3000);
+
+</script>
+</body>
+</html>

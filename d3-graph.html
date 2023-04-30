@@ -26,6 +26,7 @@
             return json;
         }
 
+        const graphBox = d3.select("#hc-graphs");
 
         async function loadGraph(name) {
             const response = await fetch(`${apiBaseURL}/loadgraph/${name}`);
@@ -36,127 +37,102 @@
         const width = 800;
         const height = 600;
 
-
-        chainGraph = {
-            nodes: [],
-            links: [],
-        }
+        const svg = d3.select("body")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
 
         const simulation = d3.forceSimulation()
-            .force("charge", d3.forceManyBody().strength(-100))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            // .force("links", d3.forceLink(data.links).distance(100))
-            .force("collision", d3.forceCollide().radius(50))
-            .nodes(chainGraph.nodes)
-            .on("tick", () => {
-                // links.attr("x1", d => d.source.x)
-                //   .attr("y1", d => d.source.y)
-                //   .attr("x2", d => d.target.x)
-                //   .attr("y2", d => d.target.y);
+            .force("link", d3.forceLink().id(d => d.id))
+            .force("charge", d3.forceManyBody())
+            .force("center", d3.forceCenter(width / 2, height / 2));
 
-                svg.selectAll('.node')
-                    .attr("cx", function (d) { return d.x })
-                    .attr("cy", function (d) { return d.y })
-                    .attr("transform", function (d) {
-                        return "translate(" + d.x + "," + d.y + ")";
-                    })
+        data = {
+            nodes: [
+                { id: "A" },
+                { id: "B" },
+                { id: "C" }
+            ],
+            links: [
+                { source: "A", target: "B" },
+                { source: "B", target: "C" },
+                { source: "C", target: "A" }
+            ]
+        };
+
+        function updateGraph() {
+            const nodes = data.nodes;
+            const links = data.links;
+
+            // Update links
+            const link = svg.selectAll("line")
+                .data(links, d => `${d.source.id}-${d.target.id}`)
+                .join("line");
+
+            // Update nodes
+            const node = svg.selectAll("circle")
+                .data(nodes, d => d.id)
+                .join("circle")
+                .attr("r", 5)
+                .call(drag(simulation));
+
+            // Update simulation nodes and links
+            simulation.nodes(nodes);
+            simulation.force("link").links(links);
+
+            simulation.on("tick", () => {
+                link.attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node.attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
             });
 
-        const svg = d3.select("#force-directed-layout");
-        // let node = svg.selectAll("circle");
+            simulation.alpha(1).restart();
+        }
 
-        const graphBox = d3.select("#hc-graphs");
+        function drag(simulation) {
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
 
-        function updateForceDirectedLayout(graphData) {
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
 
-            // const old = new Map(chainGraph.nodes.map(d => [d.name, d]));
-            // chainGraph.nodes = chainGraph.nodes.map(d => Object.assign(old.get(d.name) || {}, d));
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
 
-            // update links
-            var link = svg.selectAll('.link').data(chainGraph.links);
-            link.enter()
-                .insert('line', '.node')
-                .attr('class', 'link')
-                .style('stroke', '#d9d9d9');
-            link
-                .exit()
-                .remove()
-
-            // update nodes
-            var node = svg.selectAll('.node').data(chainGraph.nodes);
-            var g = node.enter()
-                .append('g')
-                .attr('class', 'node');
-            g.append('circle')
-                .attr("r", 20)
-                .style("fill", "#d9d9d9");
-            g.append('text')
-                .attr("class", "text")
-                .text(function (d) { return d.name });
-            node
-                .exit()
-                .remove();
-
-            // update simulation
-            simulation
-                .nodes(chainGraph.nodes)
-                .force("link", d3.forceLink(chainGraph.links).distance(100))
-                .force("charge", d3.forceManyBody().strength(-200))
-                .restart();
-
-            //   const links = svg.selectAll("line")
-            //     .data(data.links)
-            //     .enter()
-            //     .append("line")
-            //     .style("stroke", "#aaa");
-
-            // node = node
-            //     .data(nodes, d => d.name)
-            //     .join(enter =>
-            //         enter.append("circle")
-            //             .attr("r", 60)
-            //             .attr("fill", d => "cyan")
-            //     );
-            // enter.append("text")
-            //     .text(function (d) {
-            //         return d.name;
-            //     })
-            //     .style('fill', '#000')
-            //     .style('font-size', '12px')
-            //     .attr('x', 6)
-            //     .attr('y', 3);
-
-            // nodes.append("circle")
-            //     .attr("r", 20)
-            //     .style("fill", "#69b3a2");
-
-            // nodes.append("text")
-            //     .text(function (d) {
-            //         return d.name;
-            //     })
-            //     .style('fill', '#000')
-            //     .style('font-size', '12px')
-            //     .attr('x', 6)
-            //     .attr('y', 3);
-
-
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
         }
 
         function updateGraphDisplay(g) {
             console.log(g);
 
-            graphData = {
+            data = {
                 nodes: g.Nodes.map((node, index) => ({ node, index })),
+                links: []
                 // links: graphData.nodes.flatMap((node, index) => (
                 //   node.outputs.map(output => ({ source: index, target: output }))
                 // )),
             };
 
-            console.log(graphData);
-            updateForceDirectedLayout(graphData);
+            console.log(data);
+            updateGraph();
         }
 
-        function updateGraph(name) {
+        function updateGraphFromData(name) {
             loadGraph(name).then(g => updateGraphDisplay(g));
 
         };
@@ -173,7 +149,7 @@
                 .append("div")
                 .attr("class", "graphdiv")
                 // .style("opacity", 0)
-                .on("click", function (d, g) { updateGraph(g.name); })
+                .on("click", function (d, g) { updateGraphFromData(g.name); })
                 ;
             enterDiv.append("div")
                 .attr("class", "graphname")
@@ -197,7 +173,7 @@
             const hcNodes = await fetchNodeData("nodedata");
             console.log(hcNodes);
 
-
+            updateGraph();
         }
 
         main();
