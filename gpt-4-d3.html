@@ -59,6 +59,7 @@
       .data(nodes, d => d.id)
       .join("circle")
       .attr("r", 5)
+      .style("fill", "#d9d9d9")
       .call(drag(simulation));
 
     // Update simulation nodes and links

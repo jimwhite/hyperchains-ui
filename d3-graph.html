@@ -10,13 +10,25 @@
         svg {
             border: 1px solid #ccc;
         }
+
+        .node {
+            stroke: medium;
+            color: #222;
+            stroke-width: 1.5px;
+            fill: #888;
+        }
+
+        .label {
+            font-size: 12px;
+            color: #000;
+        }
     </style>
 </head>
 
 <body>
     <h1>Hypernodes API Visualization</h1>
     <div id="hc-graphs"></div>
-    <svg id="force-directed-layout" width="800" height="600"></svg>
+    <!-- <svg id="force-directed-layout" width="800" height="600"></svg> -->
     <script>
         const apiBaseURL = "https://hypernodesapiprealpha.azurewebsites.net"; // Replace with your API base URL
 
@@ -34,8 +46,8 @@
             return json;
         }
 
-        const width = 800;
-        const height = 600;
+        const width = 1200;
+        const height = 900;
 
         const svg = d3.select("body")
             .append("svg")
@@ -45,9 +57,10 @@
         const simulation = d3.forceSimulation()
             .force("link", d3.forceLink().id(d => d.id))
             .force("charge", d3.forceManyBody())
+            .force("collision", d3.forceCollide().radius(100))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
-        data = {
+        let data = {
             nodes: [
                 { id: "A" },
                 { id: "B" },
@@ -69,12 +82,22 @@
                 .data(links, d => `${d.source.id}-${d.target.id}`)
                 .join("line");
 
-            // Update nodes
-            const node = svg.selectAll("circle")
-                .data(nodes, d => d.id)
-                .join("circle")
-                .attr("r", 5)
+            // Create nodes with rectangles
+            const node = svg.selectAll("g")
+                .data(nodes)
+                .join("g")
                 .call(drag(simulation));
+
+            node.append("rect")
+                .attr("class", "node")
+                .attr("width", 80)
+                .attr("height", 30);
+
+            node.append("text")
+                .attr("class", "label")
+                .attr("dx", 10)
+                .attr("dy", 20)
+                .text(d => d.id);
 
             // Update simulation nodes and links
             simulation.nodes(nodes);
@@ -86,8 +109,7 @@
                     .attr("x2", d => d.target.x)
                     .attr("y2", d => d.target.y);
 
-                node.attr("cx", d => d.x)
-                    .attr("cy", d => d.y);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
             });
 
             simulation.alpha(1).restart();
@@ -121,7 +143,7 @@
             console.log(g);
 
             data = {
-                nodes: g.Nodes.map((node, index) => ({ node, index })),
+                nodes: g.Nodes.map((node, index) => ({ id: node.Name, node: node, i: index })),
                 links: []
                 // links: graphData.nodes.flatMap((node, index) => (
                 //   node.outputs.map(output => ({ source: index, target: output }))
@@ -133,13 +155,21 @@
         }
 
         function updateGraphFromData(name) {
-            loadGraph(name).then(g => updateGraphDisplay(g));
+            data = {
+                nodes: [
+                ],
+                links: [
+                ]
+            };
+            // Clear display while we load.
+            updateGraph();
 
+            loadGraph(name).then(g => updateGraphDisplay(g));
         };
 
 
-        function updateGraphList(data) {
-            var sorted = data.sort(function (a, b) { return d3.ascending(a.name, b.name); });
+        function updateGraphList(graphList) {
+            var sorted = graphList.sort(function (a, b) { return d3.ascending(a.name, b.name); });
 
             var graph = graphBox
                 .selectAll('div')
